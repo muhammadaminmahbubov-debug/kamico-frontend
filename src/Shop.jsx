@@ -392,7 +392,7 @@ function CartScreen({ cart, onBack, onChange, onRemove, onCheckout }) {
           </div>
         </div>
       </div>
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"white", borderTop:`1px solid ${C.border}`, padding:"12px 16px", zIndex:100 }}>
+      <div style={{ position:"fixed", bottom:60, left:0, right:0, background:"white", borderTop:`1px solid ${C.border}`, padding:"12px 16px", zIndex:100 }}>
         <button onClick={onCheckout} style={{ width:"100%", padding:13, border:"none", background:C.primary, color:"white", fontWeight:600, fontSize:14, borderRadius:6, cursor:"pointer" }}>
           Оформить заказ · {fmt(total)} сум
         </button>
