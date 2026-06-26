@@ -489,9 +489,6 @@ function CheckoutScreen({ cart, user, onBack, onDone }) {
 
 // ── SUCCESS SCREEN ───────────────────────────────────────
 function SuccessScreen({ order, onHome }) {
-  const [step, setStep] = useState(0);
-  useEffect(()=>{ if(step<STATUSES.length-1){ const t=setTimeout(()=>setStep(s=>s+1),2000); return()=>clearTimeout(t); } },[step]);
-
   return (
     <div style={{ padding:"32px 20px", maxWidth:400, margin:"0 auto" }}>
       <div style={{ fontSize:32, marginBottom:12 }}>🎉</div>
@@ -501,20 +498,16 @@ function SuccessScreen({ order, onHome }) {
 
       <div style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:16, marginBottom:16 }}>
         <div style={{ fontSize:11, letterSpacing:1.5, textTransform:"uppercase", color:C.textMuted, fontWeight:600, marginBottom:14 }}>Статус доставки</div>
-        {STATUSES.map((s,i)=>(
-          <div key={s} style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:i<STATUSES.length-1?10:0 }}>
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
-              <div style={{ width:20, height:20, borderRadius:"50%", background:i<=step?C.primary:"white", border:`1.5px solid ${i<=step?C.primary:C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all .4s" }}>
-                {i<=step && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-              </div>
-              {i<STATUSES.length-1 && <div style={{ width:1.5, height:14, background:i<step?C.primary:C.border, margin:"3px 0", transition:"background .4s" }} />}
-            </div>
-            <div style={{ paddingTop:1 }}>
-              <div style={{ fontSize:13, fontWeight:i===step?600:400, color:i<=step?C.text:C.textMuted }}>{s}</div>
-              {i===step && <div style={{ fontSize:11, color:C.primary, marginTop:1 }}>Сейчас</div>}
-            </div>
+        <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+          <div style={{ width:20, height:20, borderRadius:"50%", background:C.primary, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </div>
-        ))}
+          <div>
+            <div style={{ fontSize:13, fontWeight:600, color:C.text }}>Принят</div>
+            <div style={{ fontSize:11, color:C.primary }}>Сейчас</div>
+          </div>
+        </div>
+        <div style={{ fontSize:12, color:C.textMuted, marginTop:12 }}>Следите за статусом в разделе «Профиль → Мои заказы»</div>
       </div>
 
       <div style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:14, marginBottom:24 }}>
@@ -661,7 +654,7 @@ export default function App() {
 
       {screen==="auth"     && <AuthScreen onAuth={u=>{ setUser(u); setScreen("home"); setTab("profile"); }} />}
       {screen==="product"  && selectedProd && <ProductScreen product={selectedProd} categories={categories} onBack={()=>setScreen("home")} onAddCart={addToCart} isInCart={!!cart.find(x=>x.id===selectedProd.id)} onGoCart={()=>{ setTab("cart"); setScreen("home"); }} />}
-      {screen==="checkout" && <CheckoutScreen cart={cart} user={user} onBack={()=>setTab("cart")} onDone={form=>{ setLastOrder(form); setCart([]); setScreen("success"); }} />}
+      {screen==="checkout" && <CheckoutScreen cart={cart} user={user} onBack={()=>{ setTab("cart"); setScreen("home"); }} onDone={form=>{ setLastOrder(form); setCart([]); setScreen("success"); }} />}
       {screen==="success"  && lastOrder && <SuccessScreen order={lastOrder} onHome={()=>{ setTab("home"); setScreen("home"); }} />}
 
       {screen==="home" && (
