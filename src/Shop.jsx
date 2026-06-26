@@ -609,7 +609,7 @@ export default function App() {
   const [tab, setTab]                   = useState("home");
   const [screen, setScreen]             = useState("home");
   const [selectedProd, setSelectedProd] = useState(null);
-  const [cart, setCart]                 = useState([]);
+  const [cart, setCart] = useState(()=>{ try{ return JSON.parse(localStorage.getItem("kamico_cart"))||[]; }catch{ return []; } });
   const [lastOrder, setLastOrder]       = useState(null);
   const [products, setProducts]         = useState([]);
   const [categories, setCategories]     = useState([]);
@@ -625,8 +625,16 @@ export default function App() {
 
   const cartCount = cart.reduce((s,x)=>s+x.qty, 0);
 
+  const saveCart = (newCart) => {
+    setCart(newCart);
+    localStorage.setItem("kamico_cart", JSON.stringify(newCart));
+  };
+
   const addToCart = (p, qty=1) => {
-    setCart(c=>{ const ex=c.find(x=>x.id===p.id); return ex?c.map(x=>x.id===p.id?{...x,qty:x.qty+qty}:x):[...c,{...p,qty}]; });
+    const newCart = cart.find(x=>x.id===p.id)
+      ? cart.map(x=>x.id===p.id?{...x,qty:x.qty+qty}:x)
+      : [...cart,{...p,qty}];
+    saveCart(newCart);
     setScreen("home");
   };
 
@@ -654,14 +662,14 @@ export default function App() {
 
       {screen==="auth"     && <AuthScreen onAuth={u=>{ setUser(u); setScreen("home"); setTab("profile"); }} />}
       {screen==="product"  && selectedProd && <ProductScreen product={selectedProd} categories={categories} onBack={()=>setScreen("home")} onAddCart={addToCart} isInCart={!!cart.find(x=>x.id===selectedProd.id)} onGoCart={()=>{ setTab("cart"); setScreen("home"); }} />}
-      {screen==="checkout" && <CheckoutScreen cart={cart} user={user} onBack={()=>{ setTab("cart"); setScreen("home"); }} onDone={form=>{ setLastOrder(form); setCart([]); setScreen("success"); }} />}
+      {screen==="checkout" && <CheckoutScreen cart={cart} user={user} onBack={()=>{ setTab("cart"); setScreen("home"); }} onDone={form=>{ setLastOrder(form); saveCart([]); localStorage.removeItem("kamico_cart"); setScreen("success"); }} />}
       {screen==="success"  && lastOrder && <SuccessScreen order={lastOrder} onHome={()=>{ setTab("home"); setScreen("home"); }} />}
 
       {screen==="home" && (
         <>
           {tab==="home"    && <HomeScreen onProduct={p=>{ setSelectedProd(p); setScreen("product"); }} categories={categories} products={products} loading={loading} />}
           {tab==="catalog" && <CatalogScreen onProduct={p=>{ setSelectedProd(p); setScreen("product"); }} categories={categories} products={products} loading={loading} />}
-          {tab==="cart"    && <CartScreen cart={cart} onBack={()=>setTab("home")} onChange={(id,d)=>setCart(c=>c.map(x=>x.id===id?{...x,qty:Math.max(1,x.qty+d)}:x))} onRemove={id=>setCart(c=>c.filter(x=>x.id!==id))} onCheckout={()=>setScreen("checkout")} />}
+          {tab==="cart"    && <CartScreen cart={cart} onBack={()=>setTab("home")} onChange={(id,d)=>{ const nc=cart.map(x=>x.id===id?{...x,qty:Math.max(1,x.qty+d)}:x); saveCart(nc); }} onRemove={id=>{ const nc=cart.filter(x=>x.id!==id); saveCart(nc); }} onCheckout={()=>setScreen("checkout")} />}
           {tab==="profile" && <ProfileScreen user={user} onLogout={()=>{ localStorage.removeItem("kamico_token"); localStorage.removeItem("kamico_user"); setUser(null); }} onLogin={()=>setScreen("auth")} />}
         </>
       )}
