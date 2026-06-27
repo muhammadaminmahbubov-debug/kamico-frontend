@@ -122,26 +122,24 @@ function ProductCard({ product:p, onClick }) {
   const disc = p.old_price ? Math.round((1-p.price/p.old_price)*100) : 0;
   return (
     <div onClick={onClick}
-      style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:8, cursor:"pointer", overflow:"hidden", transition:"border-color .15s, box-shadow .15s" }}
-      onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.primary; e.currentTarget.style.boxShadow=`0 2px 12px rgba(139,34,82,.08)`; }}
-      onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.boxShadow="none"; }}>
+      style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:6, cursor:"pointer", overflow:"hidden" }}>
       <div style={{ aspectRatio:"1/1", background:C.surface, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden" }}>
         {p.image_url
           ? <img src={p.image_url} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-          : <span style={{ fontSize:40, opacity:.25 }}>🌸</span>
+          : <span style={{ fontSize:28, opacity:.2 }}>🌸</span>
         }
-        {disc>0 && <div style={{ position:"absolute", top:8, left:8, background:C.primary, color:"white", fontSize:10, fontWeight:600, padding:"3px 7px", borderRadius:4 }}>−{disc}%</div>}
-        {p.badge&&!disc && <div style={{ position:"absolute", top:8, left:8, background:C.text, color:"white", fontSize:10, fontWeight:600, padding:"3px 7px", borderRadius:4 }}>{p.badge}</div>}
+        {disc>0 && <div style={{ position:"absolute", top:5, left:5, background:C.primary, color:"white", fontSize:9, fontWeight:600, padding:"2px 5px", borderRadius:3 }}>−{disc}%</div>}
+        {p.badge&&!disc && <div style={{ position:"absolute", top:5, left:5, background:C.text, color:"white", fontSize:9, fontWeight:600, padding:"2px 5px", borderRadius:3 }}>{p.badge}</div>}
       </div>
-      <div style={{ padding:"11px 12px 13px" }}>
-        <div style={{ fontSize:11, color:C.textMuted, marginBottom:3 }}>{p.brand||"Kamico"}</div>
-        <div style={{ fontSize:13, fontWeight:500, color:C.text, lineHeight:1.4, marginBottom:8, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{p.name}</div>
-        <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-          <span style={{ fontSize:14, fontWeight:700, color:C.primary }}>{fmt(p.price)} сум</span>
-          {p.old_price && <span style={{ fontSize:11, color:C.textMuted, textDecoration:"line-through" }}>{fmt(p.old_price)}</span>}
+      <div style={{ padding:"7px 8px 9px" }}>
+        <div style={{ fontSize:9, color:C.textMuted, marginBottom:2 }}>{p.brand||"Kamico"}</div>
+        <div style={{ fontSize:11, fontWeight:500, color:C.text, lineHeight:1.35, marginBottom:5, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{p.name}</div>
+        <div style={{ display:"flex", alignItems:"baseline", gap:4 }}>
+          <span style={{ fontSize:12, fontWeight:700, color:C.primary }}>{fmt(p.price)} сум</span>
+          {p.old_price && <span style={{ fontSize:9, color:C.textMuted, textDecoration:"line-through" }}>{fmt(p.old_price)}</span>}
         </div>
-        {p.stock<=10&&p.stock>0 && <div style={{ fontSize:11, color:C.warning, marginTop:5 }}>Осталось {p.stock} шт.</div>}
-        {p.stock===0 && <div style={{ fontSize:11, color:C.textMuted, marginTop:5 }}>Нет в наличии</div>}
+        {p.stock<=10&&p.stock>0 && <div style={{ fontSize:9, color:C.warning, marginTop:3 }}>Осталось {p.stock} шт.</div>}
+        {p.stock===0 && <div style={{ fontSize:9, color:C.textMuted, marginTop:3 }}>Нет в наличии</div>}
       </div>
     </div>
   );
