@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API = "https://kamico-backend-production.up.railway.app";
 
@@ -73,7 +73,7 @@ function AuthScreen({ onAuth }) {
     <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
       <div style={{ width:"100%", maxWidth:360 }}>
         <div style={{ marginBottom:36 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
             <img src="https://giyuowciomkfcqlxlkrt.supabase.co/storage/v1/object/public/kamico.store/IMG_5208.JPG" alt="Kamico" style={{ height:44, width:"auto", objectFit:"contain" }} />
             <div style={{ fontSize:26, fontWeight:700, letterSpacing:-0.5 }}>
               <span style={{ color:C.primary, fontStyle:"italic" }}>Kamico</span>
@@ -183,7 +183,7 @@ function HomeScreen({ onProduct, categories, products, loading }) {
                 <span style={{ fontSize:16 }}>🔥</span>
                 <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:C.textMuted, fontWeight:600 }}>Популярное</span>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
                 {popular.map(p=><ProductCard key={p.id} product={p} onClick={()=>onProduct(p)} />)}
               </div>
             </div>
@@ -194,7 +194,7 @@ function HomeScreen({ onProduct, categories, products, loading }) {
                 <span style={{ fontSize:16 }}>🆕</span>
                 <span style={{ fontSize:11, letterSpacing:2, textTransform:"uppercase", color:C.textMuted, fontWeight:600 }}>Новинки</span>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
                 {newItems.map(p=><ProductCard key={p.id} product={p} onClick={()=>onProduct(p)} />)}
               </div>
             </div>
@@ -206,7 +206,7 @@ function HomeScreen({ onProduct, categories, products, loading }) {
               </span>
               <span style={{ fontSize:12, color:C.textMuted }}>{filtered.length} шт.</span>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
               {filtered.map(p=><ProductCard key={p.id} product={p} onClick={()=>onProduct(p)} />)}
             </div>
           </div>
@@ -256,7 +256,7 @@ function CatalogScreen({ onProduct, categories, products, loading }) {
         </select>
       </div>
       {loading ? <Spinner /> : (
-        <div style={{ padding:16, display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+        <div style={{ padding:16, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:7 }}>
           {filtered.map(p=><ProductCard key={p.id} product={p} onClick={()=>onProduct(p)} />)}
           {filtered.length===0 && <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:C.textMuted, fontSize:13 }}>Ничего не найдено</div>}
         </div>
@@ -289,7 +289,7 @@ function ProductScreen({ product:p, onBack, onAddCart, isInCart, onGoCart, categ
       <div style={{ padding:"20px 16px" }}>
         {p.brand && <div style={{ fontSize:11, letterSpacing:1.5, textTransform:"uppercase", color:C.textMuted, fontWeight:500, marginBottom:6 }}>{p.brand}</div>}
         <div style={{ fontSize:19, fontWeight:600, color:C.text, lineHeight:1.3, marginBottom:14 }}>{p.name}</div>
-        <div style={{ display:"flex", alignItems:"baseline", gap:10, marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"baseline", gap:7, marginBottom:16 }}>
           <span style={{ fontSize:22, fontWeight:700, color:C.primary }}>{fmt(p.price)} сум</span>
           {p.old_price && <span style={{ fontSize:14, color:C.textMuted, textDecoration:"line-through" }}>{fmt(p.old_price)} сум</span>}
         </div>
@@ -400,10 +400,19 @@ function CartScreen({ cart, onBack, onChange, onRemove, onCheckout }) {
 }
 
 // ── CHECKOUT SCREEN ──────────────────────────────────────
+const CARD_NUMBER = "5614 6821 1365 9165";
+const CARD_OWNER  = "Mahbubova Kamola";
+
 function CheckoutScreen({ cart, user, onBack, onDone }) {
-  const [form, setForm]       = useState({ client_name:user?.name||"", phone:user?.phone||"", delivery_address:"", comment:"", payment:"cash" });
+  const [form, setForm]       = useState({ client_name:user?.name||"", phone:user?.phone||"", delivery_address:"", comment:"" });
   const [errors, setErrors]   = useState({});
   const [loading, setLoading] = useState(false);
+  const [step, setStep]       = useState("form"); // form | payment
+  const [orderId, setOrderId] = useState(null);
+  const [screenshot, setScreenshot] = useState(null);
+  const [uploading, setUploading]   = useState(false);
+  const [copied, setCopied]         = useState(false);
+  const fileRef = useRef();
   const total = cart.reduce((s,x)=>s+x.price*x.qty, 0);
 
   const validate = () => {
@@ -419,15 +428,105 @@ function CheckoutScreen({ cart, user, onBack, onDone }) {
     setLoading(true);
     try {
       const items = cart.map(i=>({ product_id:i.id, quantity:i.qty }));
-      await request("/api/orders", { method:"POST", body:{ ...form, items } });
-      onDone(form);
+      const data = await request("/api/orders", { method:"POST", body:{ ...form, payment:"card", items } });
+      setOrderId(data.data.order_id);
+      setStep("payment");
     } catch(e) { setErrors({ general:e.message }); }
     finally { setLoading(false); }
+  };
+
+  const copyCard = () => {
+    navigator.clipboard.writeText(CARD_NUMBER.replace(/\s/g,""));
+    setCopied(true);
+    setTimeout(()=>setCopied(false), 2000);
+  };
+
+  const handleScreenshot = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setScreenshot(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const sendScreenshot = async () => {
+    if(!screenshot) return;
+    setUploading(true);
+    try {
+      await request("/api/orders/payment", { method:"POST", body:{ order_id: orderId, screenshot_url: screenshot } });
+      onDone({ ...form, order_id: orderId });
+    } catch(e) { alert(e.message); }
+    finally { setUploading(false); }
   };
 
   const inp = (field) => ({ width:"100%", padding:"11px 14px", border:`1px solid ${errors[field]?C.error:C.border}`, borderRadius:6, fontSize:13, outline:"none", background:"white", boxSizing:"border-box", fontFamily:"inherit", color:C.text });
   const lbl = { fontSize:11, fontWeight:500, color:C.textMuted, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.6 };
 
+  // ── PAYMENT STEP ─────────────────────────────────────
+  if(step === "payment") return (
+    <div style={{ paddingBottom:100 }}>
+      <div style={{ padding:"13px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12 }}>
+        <span style={{ fontSize:15, fontWeight:600, color:C.text }}>Оплата заказа #{orderId}</span>
+      </div>
+      <div style={{ padding:16 }}>
+        {/* Card info */}
+        <div style={{ background:"#111", borderRadius:12, padding:20, marginBottom:16, color:"white" }}>
+          <div style={{ fontSize:11, color:"#888", textTransform:"uppercase", letterSpacing:1, marginBottom:12 }}>Переведите на карту</div>
+          <div style={{ fontSize:22, fontWeight:700, letterSpacing:3, marginBottom:8 }}>{CARD_NUMBER}</div>
+          <div style={{ fontSize:13, color:"#aaa" }}>{CARD_OWNER}</div>
+          <div style={{ marginTop:16, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div>
+              <div style={{ fontSize:11, color:"#888" }}>Сумма к оплате</div>
+              <div style={{ fontSize:20, fontWeight:700, color:C.primary }}>{fmt(total)} сум</div>
+            </div>
+            <button onClick={copyCard}
+              style={{ padding:"8px 16px", borderRadius:8, border:"none", background:copied?"#1A6B3C":C.primary, color:"white", fontWeight:600, fontSize:12, cursor:"pointer", transition:"background .2s" }}>
+              {copied ? "✓ Скопировано" : "Копировать"}
+            </button>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div style={{ background:C.primaryLight, border:`1px solid ${C.primaryBorder}`, borderRadius:8, padding:14, marginBottom:16 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:C.primary, marginBottom:8 }}>Инструкция:</div>
+          <div style={{ fontSize:12, color:C.textSub, lineHeight:1.8 }}>
+            1. Скопируйте номер карты<br/>
+            2. Откройте банковское приложение<br/>
+            3. Переведите <strong>{fmt(total)} сум</strong><br/>
+            4. Сделайте скриншот перевода<br/>
+            5. Загрузите скриншот ниже
+          </div>
+        </div>
+
+        {/* Screenshot upload */}
+        <div style={{ marginBottom:16 }}>
+          <label style={lbl}>Скриншот оплаты</label>
+          {screenshot ? (
+            <div>
+              <img src={screenshot} alt="screenshot" style={{ width:"100%", borderRadius:8, border:`1px solid ${C.border}`, marginBottom:8 }} />
+              <button onClick={()=>setScreenshot(null)} style={{ fontSize:12, color:C.error, background:"none", border:"none", cursor:"pointer", padding:0 }}>✕ Удалить</button>
+            </div>
+          ) : (
+            <div onClick={()=>fileRef.current.click()}
+              style={{ border:`2px dashed ${C.border}`, borderRadius:8, padding:24, textAlign:"center", cursor:"pointer", background:C.surface }}>
+              <div style={{ fontSize:28, marginBottom:6 }}>📸</div>
+              <div style={{ fontSize:13, color:C.textSub }}>Нажмите чтобы загрузить скриншот</div>
+            </div>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleScreenshot} />
+        </div>
+      </div>
+
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"white", borderTop:`1px solid ${C.border}`, padding:"12px 16px", zIndex:100 }}>
+        <button onClick={sendScreenshot} disabled={!screenshot||uploading}
+          style={{ width:"100%", padding:13, border:"none", background:!screenshot||uploading?"#ccc":C.primary, color:"white", fontWeight:600, fontSize:14, borderRadius:6, cursor:!screenshot||uploading?"default":"pointer" }}>
+          {uploading ? "Отправляем..." : "Подтвердить оплату"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── FORM STEP ────────────────────────────────────────
   return (
     <div style={{ paddingBottom:100 }}>
       <div style={{ padding:"13px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12 }}>
@@ -464,21 +563,17 @@ function CheckoutScreen({ cart, user, onBack, onDone }) {
             style={{ width:"100%", padding:"11px 14px", border:`1px solid ${C.border}`, borderRadius:6, fontSize:13, outline:"none", background:"white", boxSizing:"border-box", fontFamily:"inherit", resize:"none", color:C.text }} />
         </div>
 
-        <div style={{ marginBottom:20 }}>
-          <label style={lbl}>Способ оплаты</label>
-          <div style={{ display:"flex", gap:8 }}>
-            {[{ id:"cash", label:"💵 Наличные" },{ id:"card", label:"💳 Карта" }].map(opt=>(
-              <button key={opt.id} onClick={()=>setForm(f=>({...f,payment:opt.id}))}
-                style={{ flex:1, padding:"10px 0", border:`1px solid ${form.payment===opt.id?C.primary:C.border}`, background:form.payment===opt.id?C.primaryLight:"white", color:form.payment===opt.id?C.primary:C.textSub, fontWeight:form.payment===opt.id?600:400, fontSize:13, borderRadius:6, cursor:"pointer" }}>
-                {opt.label}
-              </button>
-            ))}
+        <div style={{ background:"#111", borderRadius:8, padding:12, marginBottom:14, display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:20 }}>💳</span>
+          <div>
+            <div style={{ fontSize:11, color:"#888" }}>Оплата картой при оформлении</div>
+            <div style={{ fontSize:12, color:"white", fontWeight:500 }}>Реквизиты карты придут на следующем шаге</div>
           </div>
         </div>
       </div>
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"white", borderTop:`1px solid ${C.border}`, padding:"12px 16px", zIndex:100 }}>
         <button onClick={submit} disabled={loading} style={{ width:"100%", padding:13, border:"none", background:C.primary, color:"white", fontWeight:600, fontSize:14, borderRadius:6, cursor:loading?"default":"pointer", opacity:loading?.7:1 }}>
-          {loading ? "Оформляем..." : "Подтвердить заказ"}
+          {loading ? "Оформляем..." : "Далее — к оплате →"}
         </button>
       </div>
     </div>
