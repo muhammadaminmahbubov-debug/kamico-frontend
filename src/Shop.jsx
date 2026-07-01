@@ -81,6 +81,9 @@ function AuthScreen({ onAuth }) {
             </div>
           </div>
           <div style={{ fontSize:13, color:C.textMuted }}>Косметика и уход за собой</div>
+          <div style={{ fontSize:12, color:C.primary, marginTop:8, background:C.primaryLight, border:`1px solid ${C.primaryBorder}`, borderRadius:6, padding:"8px 10px" }}>
+            Войдите или зарегистрируйтесь, чтобы оформить заказ и отслеживать его статус
+          </div>
         </div>
         <div style={{ display:"flex", borderBottom:`1px solid ${C.border}`, marginBottom:24 }}>
           {["login","register"].map(m => (
@@ -827,7 +830,7 @@ export default function App() {
         </div>
       )}
 
-      {screen==="auth"     && <AuthScreen onAuth={u=>{ setUser(u); setScreen("home"); setTab("profile"); }} />}
+      {screen==="auth"     && <AuthScreen onAuth={u=>{ setUser(u); setScreen("home"); setTab(cart.length>0 ? "cart" : "profile"); }} />}
       {screen==="product"  && selectedProd && <ProductScreen product={selectedProd} categories={categories} onBack={()=>setScreen("home")} onAddCart={addToCart} isInCart={!!cart.find(x=>x.id===selectedProd.id)} onGoCart={()=>{ setTab("cart"); setScreen("home"); }} />}
       {screen==="checkout" && <CheckoutScreen cart={cart} user={user} onBack={()=>{ setTab("cart"); setScreen("home"); }} onDone={form=>{ setLastOrder(form); saveCart([]); localStorage.removeItem("kamico_cart"); setScreen("success"); }} />}
       {screen==="success"  && lastOrder && <SuccessScreen order={lastOrder} onHome={()=>{ setTab("home"); setScreen("home"); }} />}
@@ -836,7 +839,7 @@ export default function App() {
         <>
           {tab==="home"    && <HomeScreen onProduct={p=>{ setSelectedProd(p); setScreen("product"); }} categories={categories} products={products} loading={loading} />}
           {tab==="catalog" && <CatalogScreen onProduct={p=>{ setSelectedProd(p); setScreen("product"); }} categories={categories} products={products} loading={loading} />}
-          {tab==="cart"    && <CartScreen cart={cart} onBack={()=>setTab("home")} onChange={(id,d)=>{ const nc=cart.map(x=>x.id===id?{...x,qty:Math.max(1,x.qty+d)}:x); saveCart(nc); }} onRemove={id=>{ const nc=cart.filter(x=>x.id!==id); saveCart(nc); }} onCheckout={()=>setScreen("checkout")} />}
+          {tab==="cart"    && <CartScreen cart={cart} onBack={()=>setTab("home")} onChange={(id,d)=>{ const nc=cart.map(x=>x.id===id?{...x,qty:Math.max(1,x.qty+d)}:x); saveCart(nc); }} onRemove={id=>{ const nc=cart.filter(x=>x.id!==id); saveCart(nc); }} onCheckout={()=>{ if(user){ setScreen("checkout"); } else { setScreen("auth"); } }} />}
           {tab==="profile" && <ProfileScreen user={user} onLogout={()=>{ localStorage.removeItem("kamico_token"); localStorage.removeItem("kamico_user"); setUser(null); }} onLogin={()=>setScreen("auth")} />}
         </>
       )}
