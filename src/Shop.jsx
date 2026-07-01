@@ -55,6 +55,15 @@ function AuthScreen({ onAuth }) {
 
   const submit = async () => {
     setLoading(true); setError("");
+    // Проверка номера при регистрации
+    if(mode==="register"){
+      const digits = form.phone.replace(/\D/g,"");
+      if(!(digits.length===12 && digits.startsWith("998")) && !(digits.length===9)){
+        setError("Введите настоящий номер в формате +998 XX XXX XX XX");
+        setLoading(false);
+        return;
+      }
+    }
     try {
       const endpoint = mode==="login" ? "/api/auth/login" : "/api/auth/register";
       const body = mode==="login" ? { phone:form.phone, password:form.password } : form;
@@ -102,6 +111,7 @@ function AuthScreen({ onAuth }) {
         <div style={{ marginBottom:12 }}>
           <label style={lbl}>Телефон</label>
           <input style={inp} value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="+998 90 123 45 67" type="tel" />
+          {mode==="register" && <div style={{ fontSize:11, color:C.textMuted, marginTop:5 }}>Введите настоящий номер — по нему мы свяжемся для подтверждения и доставки</div>}
         </div>
         <div style={{ marginBottom: error ? 10 : 20 }}>
           <label style={lbl}>Пароль</label>
@@ -421,7 +431,14 @@ function CheckoutScreen({ cart, user, onBack, onDone }) {
   const validate = () => {
     const e={};
     if(!form.client_name.trim()) e.client_name="Введите имя";
-    if(!form.phone.trim())       e.phone="Введите телефон";
+    if(!form.phone.trim()){
+      e.phone="Введите телефон";
+    } else {
+      const digits = form.phone.replace(/\D/g,"");
+      if(!(digits.length===12 && digits.startsWith("998")) && !(digits.length===9)){
+        e.phone="Проверьте номер: +998 XX XXX XX XX";
+      }
+    }
     if(!form.delivery_address.trim()) e.delivery_address="Введите адрес";
     setErrors(e); return Object.keys(e).length===0;
   };
@@ -556,6 +573,7 @@ function CheckoutScreen({ cart, user, onBack, onDone }) {
           <div key={field} style={{ marginBottom:14 }}>
             <label style={lbl}>{label}</label>
             <input style={inp(field)} value={form[field]} onChange={e=>setForm(f=>({...f,[field]:e.target.value}))} placeholder={ph} type={field==="phone"?"tel":"text"} />
+            {field==="phone" && !errors.phone && <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>Введите настоящий номер — по нему свяжется курьер</div>}
             {errors[field] && <div style={{ fontSize:11, color:C.error, marginTop:4 }}>{errors[field]}</div>}
           </div>
         ))}
