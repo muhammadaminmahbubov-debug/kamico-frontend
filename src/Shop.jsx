@@ -617,14 +617,34 @@ function SuccessScreen({ order, onHome }) {
 
 // ── PROFILE SCREEN ───────────────────────────────────────
 function ProfileScreen({ user, onLogout, onLogin }) {
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [cancelling, setCancelling] = useState(null); // order being cancelled
+  const [cardForm, setCardForm]     = useState({ card:"", bank:"Uzcard" });
+  const [sending, setSending]       = useState(false);
 
-  useEffect(()=>{
+  const loadOrders = () => {
     if(!user) return;
     setLoading(true);
     request("/api/orders").then(d=>setOrders(d.data||[])).catch(()=>{}).finally(()=>setLoading(false));
-  },[user]);
+  };
+
+  useEffect(()=>{ loadOrders(); },[user]);
+
+  const cancelOrder = async () => {
+    if(!cardForm.card.trim()) return alert("Введите номер карты");
+    setSending(true);
+    try {
+      await request(`/api/orders/${cancelling.id}/cancel`, {
+        method:"POST",
+        body:{ card_number: cardForm.card, bank: cardForm.bank }
+      });
+      setOrders(os=>os.map(o=>o.id===cancelling.id?{...o,status:"cancelled"}:o));
+      setCancelling(null);
+      setCardForm({ card:"", bank:"Uzcard" });
+    } catch(e) { alert(e.message); }
+    finally { setSending(false); }
+  };
 
   const statusLabel = { new:"Принят", processing:"Собирается", delivery:"В пути", completed:"Доставлен", cancelled:"Отменён" };
   const statusColor = (s) => s==="completed"?C.success:s==="cancelled"?C.error:C.primary;
@@ -641,6 +661,51 @@ function ProfileScreen({ user, onLogout, onLogin }) {
     </div>
   );
 
+  // Cancel modal
+  if(cancelling) return (
+    <div style={{ paddingBottom:100 }}>
+      <div style={{ padding:"13px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={()=>setCancelling(null)} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:C.text, padding:0 }}>←</button>
+        <span style={{ fontSize:15, fontWeight:600, color:C.text }}>Отмена заказа #{cancelling.id}</span>
+      </div>
+      <div style={{ padding:16 }}>
+        <div style={{ background:"#FEF2F2", border:`1px solid #FECACA`, borderRadius:8, padding:14, marginBottom:20 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.error, marginBottom:6 }}>Вы отменяете заказ</div>
+          <div style={{ fontSize:12, color:C.textSub }}>Сумма: <strong>{fmt(cancelling.total_price)} сум</strong></div>
+          <div style={{ fontSize:12, color:C.textSub, marginTop:4 }}>Для возврата укажите номер карты — мы переведём деньги в течение 24 часов.</div>
+        </div>
+
+        <div style={{ marginBottom:14 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:C.textMuted, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.6 }}>Номер карты</label>
+          <input value={cardForm.card} onChange={e=>setCardForm(f=>({...f,card:e.target.value}))} placeholder="0000 0000 0000 0000"
+            style={{ width:"100%", padding:"11px 14px", border:`1px solid ${C.border}`, borderRadius:6, fontSize:13, outline:"none", background:"white", boxSizing:"border-box", fontFamily:"inherit" }} />
+        </div>
+
+        <div style={{ marginBottom:20 }}>
+          <label style={{ fontSize:11, fontWeight:500, color:C.textMuted, display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:.6 }}>Банк</label>
+          <div style={{ display:"flex", gap:8 }}>
+            {["Uzcard","Humo"].map(b=>(
+              <button key={b} onClick={()=>setCardForm(f=>({...f,bank:b}))}
+                style={{ flex:1, padding:"10px 0", border:`1px solid ${cardForm.bank===b?C.primary:C.border}`, background:cardForm.bank===b?C.primaryLight:"white", color:cardForm.bank===b?C.primary:C.textSub, fontWeight:cardForm.bank===b?600:400, fontSize:13, borderRadius:6, cursor:"pointer" }}>
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background:C.primaryLight, border:`1px solid ${C.primaryBorder}`, borderRadius:8, padding:12, marginBottom:20, fontSize:12, color:C.textSub }}>
+          По вопросам возврата: <strong style={{ color:C.text }}>+998 77 302 85 10</strong>
+        </div>
+      </div>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"white", borderTop:`1px solid ${C.border}`, padding:"12px 16px", zIndex:100 }}>
+        <button onClick={cancelOrder} disabled={sending}
+          style={{ width:"100%", padding:13, border:"none", background:sending?"#ccc":C.error, color:"white", fontWeight:600, fontSize:14, borderRadius:6, cursor:sending?"default":"pointer" }}>
+          {sending ? "Отменяем..." : "Подтвердить отмену"}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ paddingBottom:80 }}>
       <div style={{ padding:"20px 16px", borderBottom:`1px solid ${C.border}` }}>
@@ -653,13 +718,22 @@ function ProfileScreen({ user, onLogout, onLogin }) {
         {loading ? <Spinner /> : orders.length===0
           ? <div style={{ fontSize:13, color:C.textMuted, padding:"20px 0" }}>Заказов пока нет</div>
           : orders.map(o=>(
-            <div key={o.id} style={{ border:`1px solid ${C.border}`, borderRadius:8, padding:14, marginBottom:10 }}>
+            <div key={o.id} style={{ border:`1px solid ${o.status==="cancelled"?"#FECACA":C.border}`, borderRadius:8, padding:14, marginBottom:10, background:o.status==="cancelled"?"#FFF8F8":"white" }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                 <span style={{ fontSize:12, color:C.textMuted }}>Заказ #{o.id} · {new Date(o.created_at).toLocaleDateString("ru-RU")}</span>
                 <span style={{ fontSize:11, fontWeight:600, color:statusColor(o.status) }}>{statusLabel[o.status]||o.status}</span>
               </div>
               <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:3 }}>{fmt(o.total_price)} сум</div>
-              <div style={{ fontSize:12, color:C.textSub }}>{o.delivery_address}</div>
+              <div style={{ fontSize:12, color:C.textSub, marginBottom: o.status==="new" ? 10 : 0 }}>{o.delivery_address}</div>
+              {o.status==="new" && (
+                <button onClick={()=>setCancelling(o)}
+                  style={{ fontSize:12, color:C.error, background:"none", border:`1px solid #FECACA`, borderRadius:6, padding:"6px 14px", cursor:"pointer", fontFamily:"inherit", fontWeight:500 }}>
+                  Отменить заказ
+                </button>
+              )}
+              {o.status==="cancelled" && (
+                <div style={{ fontSize:11, color:C.error, marginTop:4 }}>Возврат: свяжитесь с нами — +998 77 302 85 10</div>
+              )}
             </div>
           ))
         }
